@@ -1,5 +1,5 @@
 # gem-ethernet-usermode-pmd (GEM-U)
-GEM ethernet Userspace (GEM-U) Poll Mode driver (PMD) for MPSoC Utralscale+
+GEM ethernet Userspace (GEM-U) Poll Mode driver (PMD) for AMD Zynq Ultralscale+ MPSoC
 
 The GEM-U PMD leverages kernel macb driver for PHY initialization and configuration and performs only packet IO as a usermode application. 
 
