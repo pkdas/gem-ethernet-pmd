@@ -21,11 +21,15 @@ echo GEM$dev Baseaddr : $baseaddr
 network_ctrl_reg=0x00
 network_cfg_reg=0x04
 network_status_reg=0x08
+
 dma_cfg_reg=0x10
 tx_status_reg=0x14
+rx_q_ptr_hi_reg=0x4D4
+tx_q_ptr_hi_reg=0x4C8
 rx_q_ptr_reg=0x18
 tx_q_ptr_reg=0x1C
 rx_status_reg=0x20
+
 int_status_reg=0x24
 int_enable_reg=0x28
 int_disable_reg=0x2C
@@ -74,6 +78,7 @@ read_mpsoc_reg()
         
     #echo -n " "$regname: 
     devmem $regaddr 32
+    sleep 0.1
 }
 
 write_reg()
@@ -93,6 +98,7 @@ write_reg()
     #echo -n " "$regname: 
     echo "Write command is \"devmem $regaddr 32 $val\""
     devmem $regaddr 32 $val
+    sleep 0.1
 }
 
 show_gem_regs()
@@ -101,45 +107,22 @@ show_gem_regs()
     read_reg network_config   $network_cfg_reg
     read_reg network_status   $network_status_reg
     read_reg dma_config       $dma_cfg_reg
+    read_reg tx_q_hi_ptr      $tx_q_ptr_hi_reg
     read_reg tx_q_ptr         $tx_q_ptr_reg
+    read_reg rx_q_hi_ptr      $rx_q_ptr_hi_reg
     read_reg rx_q_ptr         $rx_q_ptr_reg
     read_reg tx_status        $tx_status_reg
     read_reg rx_status        $rx_status_reg
 
-    read_reg int_status       $int_status_reg 
-    read_reg int_enable       $int_enable_reg 
-    read_reg int_disable      $int_disable_reg 
-    read_reg int_mask         $int_mask_reg 
+    read_reg int_status       $int_status_reg
+    read_reg int_enable       $int_enable_reg
+    read_reg int_disable      $int_disable_reg
+    read_reg int_mask         $int_mask_reg
 
-    read_reg int_q1_status    $int_q1_status_reg   
+    read_reg int_q1_status    $int_q1_status_reg
     read_reg int_q1_enable    $int_q1_enable_reg
     read_reg int_q1_disable   $int_q1_disable_reg
-    read_reg int_q1_mask      $int_q1_mask_reg 
+    read_reg int_q1_mask      $int_q1_mask_reg
 }
 
-enable_gem()
-{
-    show_gem_regs
-
-    write_reg network_config "$network_cfg_reg" 0x012E044A
-    write_reg dma_config     "$dma_cfg_reg"     0x40180F10 
-
-    #enable interrupts
-    write_reg int_enable    "$int_enable_reg"      0xCFA  
-    #write_reg int_q1_enable "$int_q1_enable_reg"   0xFFF
-
-    echo "Enabled interrupts"
-    echo "wair 2 secs.."
-    sleep 2
-
-    #generate HRESP DMA error int
-    write_reg int_mask "$int_mask_reg" 0x800 
-    echo "triggered HRESP error int"
-    echo "wait 2 secs.."
-    sleep 2
-
-    show_gem_regs
-}
-
-enable_gem
-
+show_gem_regs

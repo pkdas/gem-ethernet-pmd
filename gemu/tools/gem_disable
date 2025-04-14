@@ -21,11 +21,13 @@ echo GEM$dev Baseaddr : $baseaddr
 network_ctrl_reg=0x00
 network_cfg_reg=0x04
 network_status_reg=0x08
+
 dma_cfg_reg=0x10
 tx_status_reg=0x14
 rx_q_ptr_reg=0x18
 tx_q_ptr_reg=0x1C
 rx_status_reg=0x20
+
 int_status_reg=0x24
 int_enable_reg=0x28
 int_disable_reg=0x2C
@@ -74,6 +76,7 @@ read_mpsoc_reg()
         
     #echo -n " "$regname: 
     devmem $regaddr 32
+    sleep 0.1
 }
 
 write_reg()
@@ -93,6 +96,7 @@ write_reg()
     #echo -n " "$regname: 
     echo "Write command is \"devmem $regaddr 32 $val\""
     devmem $regaddr 32 $val
+    sleep 0.1
 }
 
 show_gem_regs()
@@ -106,40 +110,68 @@ show_gem_regs()
     read_reg tx_status        $tx_status_reg
     read_reg rx_status        $rx_status_reg
 
-    read_reg int_status       $int_status_reg 
-    read_reg int_enable       $int_enable_reg 
-    read_reg int_disable      $int_disable_reg 
-    read_reg int_mask         $int_mask_reg 
+    read_reg int_status       $int_status_reg
+    read_reg int_enable       $int_enable_reg
+    read_reg int_disable      $int_disable_reg
+    read_reg int_mask         $int_mask_reg
 
-    read_reg int_q1_status    $int_q1_status_reg   
+    read_reg int_q1_status    $int_q1_status_reg
     read_reg int_q1_enable    $int_q1_enable_reg
     read_reg int_q1_disable   $int_q1_disable_reg
-    read_reg int_q1_mask      $int_q1_mask_reg 
+    read_reg int_q1_mask      $int_q1_mask_reg
 }
 
-enable_gem()
+disable_gem()
 {
     show_gem_regs
 
-    write_reg network_config "$network_cfg_reg" 0x012E044A
-    write_reg dma_config     "$dma_cfg_reg"     0x40180F10 
+    echo "Disabling Interrupts"
 
-    #enable interrupts
-    write_reg int_enable    "$int_enable_reg"      0xCFA  
-    #write_reg int_q1_enable "$int_q1_enable_reg"   0xFFF
+    #disable all interrupts
+    write_reg int_disable    "$int_disable_reg"      0x3FFFFFFF
+    #write_reg int_q1_disable "$int_q1_disable_reg"   0xFFF
 
-    echo "Enabled interrupts"
+    echo "Disabled interrupts"
     echo "wair 2 secs.."
     sleep 2
 
-    #generate HRESP DMA error int
-    write_reg int_mask "$int_mask_reg" 0x800 
-    echo "triggered HRESP error int"
+    #disable tx/rx
+    write_reg network_ctrl "$network_ctrl_reg" 0x00100000 
+    echo "disabled tx/rx/mgmt"
     echo "wait 2 secs.."
     sleep 2
+
+    echo "clear any pending interrupt"
+
+    int_status_val=`read_reg_quiet int_status "$int_status_reg"`
+    echo "int status reg val >> $int_status_val"
+    while [[ "$int_status_val" -ne 0 ]]; do
+        write_reg int_status "$int_status_reg" 0 
+        echo "sleeping 5 secs.."
+        sleep 5
+        int_status_val=`read_reg_quiet int_status "int_status_reg"`
+
+        echo "new int status $int_status_val"
+    done
+    echo "Cleared int status"
+    
+    int_q1_status_val=`read_reg_quiet int_q1_status $int_q1_status_reg`
+    echo "int q1 status reg val >> $int_q1_status_val"
+    while [[ "$int_q1_status_val" -ne 0 ]]; do
+        write_reg int_q1_status "$int_q1_status_reg" 0 
+        echo "sleeping 5 secs.."
+        sleep 5
+        int_q1_status_val=`read_reg_quiet int_q1_status "$int_q1_status_reg"`
+
+        echo "new int q1 status $int_q1_status_val"
+    done
+    echo "Cleared int q1 status"
+
+    echo "done disabling gem$dev"
 
     show_gem_regs
 }
 
-enable_gem
+
+disable_gem
 

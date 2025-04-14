@@ -1,0 +1,284 @@
+#GEM3
+baseaddr=0xFF0E0000
+
+dev=3
+show_regaddr=true
+
+if [ $# -ge 1 ]; then 
+    dev=$1  
+    [ $1 -eq 0 ] && baseaddr=0xFF0B0000
+    [ $1 -eq 1 ] && baseaddr=0xFF0C0000
+    [ $1 -eq 2 ] && baseaddr=0xFF0D0000
+    [ $1 -eq 3 ] && baseaddr=0xFF0E0000
+fi
+
+if [ $# -ge 2 ]; then 
+    show_regaddr=false
+fi
+
+echo GEM$dev Baseaddr : $baseaddr
+
+# args regname, offset
+read_reg()
+{
+    regname=$1
+    offset=$2
+    printf -v regaddr '%#x' "$((baseaddr+offset))"
+    #echo -n ">"$regname $regaddr= 
+
+    if [ "$show_regaddr" = true ]; then
+        printf "%-20s %10s" ">"$regname $regaddr= 
+    else
+        printf "%-20s" ">"$regname 
+    fi
+        
+    #echo -n " "$regname: 
+    devmem $regaddr 32
+}
+
+read_mpsoc_reg()
+{
+    regname=$1
+    regaddr=$2
+
+    if [ "$show_regaddr" = true ]; then
+        printf "%-20s %10s" ">"$regname $regaddr= 
+    else
+        printf "%-20s" ">"$regname 
+    fi
+        
+    #echo -n " "$regname: 
+    devmem $regaddr 32
+}
+
+read_reg network_control  0x00
+read_reg network_config   0x04
+read_reg network_status   0x08
+read_reg dma_config       0x10
+read_reg transmit_status  0x14
+read_reg receive_q_ptr    0x18
+read_reg transmit_q_ptr   0x1C
+read_reg receive_status   0x20
+read_reg int_status       0x24
+read_reg int_enable       0x28
+read_reg int_disable      0x2C
+read_reg int_mask         0x30
+read_reg phy_mgmt         0x34
+read_reg jumbo_max_len    0x48
+read_reg axi_max_pipeline 0x54
+read_reg spec_addr1_bt    0x88
+read_reg spec_addr1_top   0x8C 
+read_reg spec_addr2_bt    0x90
+read_reg spec_addr2_top   0x94 
+read_reg spec_addr3_bt    0x98
+read_reg spec_addr3_top   0x9C 
+read_reg spec_addr4_bt    0xA0
+read_reg spec_addr4_top   0xA4 
+
+read_reg spec_type1       0xA8
+read_reg spec_type2       0xAC
+read_reg spec_type3       0xB0
+read_reg spec_type4       0xB4
+read_reg dma_addr_mask    0xD0
+
+read_reg revision_reg     0xFC
+
+#stats
+
+# tx stats
+read_reg octets_tx_bt     0x100
+read_reg octets_tx_top    0x104
+read_reg frames_tx_ok     0x108
+read_reg broadcast_tx     0x10C
+read_reg multicast_tx     0x110
+read_reg pause_frames_tx  0x114
+read_reg frames_tx_64     0x118
+read_reg frames_tx_65     0x11C
+read_reg frames_tx_128    0x120
+read_reg frames_tx_256    0x124
+read_reg frames_tx_512    0x128
+read_reg frames_tx_1024   0x12C
+read_reg frames_tx_1519   0x130
+
+# tx errors
+read_reg tx_underruns     0x134
+read_reg single_coll      0x138
+read_reg multi_coll       0x13C
+read_reg excess_coll      0x140
+read_reg late_coll        0x144
+read_reg deferred_frames  0x148
+read_reg crc_errors       0x14C
+
+# rx stats
+read_reg octets_rx_bt     0x150
+read_reg octets_rx_top    0x154
+read_reg frames_rx_ok     0x158
+read_reg broadcast_rx     0x15C
+read_reg multicast_rx     0x160
+read_reg pause_frames_rx  0x164
+read_reg frames_rx_64     0x168
+read_reg frames_rx_65     0x16C
+read_reg frames_rx_128    0x170
+read_reg frames_rx_256    0x174
+read_reg frames_rx_512    0x178
+read_reg frames_rx_1024   0x17C
+read_reg frames_rx_1519   0x180
+
+
+#rx errors
+read_reg undersize_frames 0x184
+read_reg excess_rx_len    0x188
+read_reg rx_jabbers       0x18C
+read_reg fcs_errors       0x190
+read_reg rx_len_err       0x194
+read_reg rx_sym_err       0x198
+read_reg align_error      0x19C
+read_reg rx_resource_err  0x1A0
+read_reg rx_overruns      0x1A4
+read_reg rx_ip_csum_err   0x1A8
+read_reg rx_tcp_csum_err  0x1AC
+read_reg rx_udp_csum_err  0x1B0
+
+read_reg auto_flush_pkts  0x1B4
+
+# PCS
+read_reg pcs_control      0x200
+read_reg pcs_status       0x204
+read_reg pcs_phy_id_top   0x208
+read_reg pcs_phy_id_bot   0x20C
+
+# debug regs
+read_reg designcfg_dbg1   0x280
+read_reg designcfg_dbg2   0x284
+read_reg designcfg_dbg3   0x288
+read_reg designcfg_dbg4   0x28C
+read_reg designcfg_dbg5   0x290
+read_reg designcfg_dbg6   0x294
+read_reg designcfg_dbg7   0x298
+read_reg designcfg_dbg8   0x29C
+read_reg designcfg_dbg9   0x2A0
+read_reg designcfg_dbg10  0x2A4
+
+# q1 
+read_reg int_q1_status    0x400
+read_reg transmit_q1_ptr  0x440
+read_reg receive_q1_ptr   0x480
+read_reg dma_rxbuf_sz_q1  0x4A0
+
+read_reg upper_tx_q_baddr 0x4C8
+read_reg tx_bd_control    0x4CC
+read_reg rx_bd_control    0x4D0
+read_reg upper_rx_q_baddr 0x4D4
+
+#screening
+read_reg scrn_type1_reg0  0x500
+read_reg scrn_type1_reg1  0x504
+read_reg scrn_type1_reg2  0x508
+read_reg scrn_type1_reg3  0x50C
+read_reg scrn_type2_reg0  0x540
+read_reg scrn_type2_reg1  0x544
+read_reg scrn_type2_reg2  0x548
+read_reg scrn_type2_reg3  0x54C
+
+# int q1
+read_reg int_q1_enable    0x600
+read_reg int_q1_disable   0x620
+read_reg int_q1_mask      0x640
+
+
+read_mpsoc_reg IOU_COHERENT_CTRL 0x00FF180400
+read_mpsoc_reg GEM_CLK_CTRL 0x00FF180308
+read_mpsoc_reg GEM_CTRL     0x00FF180360
+
+
+echo "reg dump done"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
