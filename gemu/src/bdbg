@@ -1,7 +1,0 @@
-#!/bin/bash
-
-touch *.h
-touch *.c
-gcc -fno-use-linker-plugin -DGEMU_DEBUG -g -O0 gemu.c gemu_config.c gemu_main.c  gemu_mm.c -o build/kkdbg
-
-
