@@ -1,0 +1,252 @@
+
+/build-root/build-vpp_debug-native/vpp/CMakeFiles/vpp/app/version.h
+
+#define VPP_BUILD_DATE "2025-06-09T23:22:06"
+#define VPP_BUILD_USER "rusty"
+#define VPP_BUILD_HOST "verycool-0"
+#define VPP_BUILD_TOPDIR "/home/rusty/new/vpp"
+#define VPP_BUILD_VER "25.02-release"
+
+=======
+
+rusty@verycool-0:~/new/vpp$ git status
+Not currently on any branch.
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   build/external/Makefile
+	modified:   build/external/deb/debian/rules
+	modified:   build/external/packages/dpdk.mk
+	modified:   build/external/packages/quicly.mk
+	deleted:    build/external/patches/dpdk_24.11.1/0001-net-ice-fix-how-ice-driver-handles-flows.patch
+	modified:   build/packages_common.mk
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+==========
+
+
+rusty@verycool-0:~/new/vpp$ git diff
+diff --git a/build/external/Makefile b/build/external/Makefile
+index 5394eccc3..3f0619f59 100644
+--- a/build/external/Makefile
++++ b/build/external/Makefile
+@@ -17,11 +17,11 @@ include ../build_common.mk
+ include ../packages_common.mk
+ 
+ include packages/ipsec-mb.mk
+-include packages/quicly.mk
++#include packages/quicly.mk
+ ifneq ($(shell uname), FreeBSD)
+-include packages/rdma-core.mk
+-include packages/xdp-tools.mk
+-include packages/octeon-roc.mk
++#include packages/rdma-core.mk
++#include packages/xdp-tools.mk
++#include packages/octeon-roc.mk
+ endif  # ! FreeBSD
+ include packages/dpdk.mk
+ 
+@@ -33,14 +33,16 @@ clean:
+ ifeq ($(shell uname), FreeBSD)
+ install: $(if $(ARCH_X86_64), ipsec-mb-install) dpdk-install quicly-install
+ else
+-install: $(if $(ARCH_X86_64), ipsec-mb-install) dpdk-install rdma-core-install quicly-install xdp-tools-install $(if $(AARCH64), octeon-roc-install)
++install: $(if $(ARCH_X86_64), ipsec-mb-install) dpdk-install 
++#install: $(if $(ARCH_X86_64), ipsec-mb-install) dpdk-install rdma-core-install quicly-install xdp-tools-install $(if $(AARCH64), octeon-roc-install)
+ endif  # FreeBSD
+ 
+ .PHONY: config
+ ifeq ($(shell uname), FreeBSD)
+ config: $(if $(ARCH_X86_64), ipsec-mb-config) dpdk-config quicly-build
+ else
+-config: $(if $(ARCH_X86_64), ipsec-mb-config) dpdk-config rdma-core-config quicly-build
++#config: $(if $(ARCH_X86_64), ipsec-mb-config) dpdk-config rdma-core-config quicly-build
++config: $(if $(ARCH_X86_64), ipsec-mb-config) dpdk-config 
+ endif  # FreeBSD
+ 
+ ##############################################################################
+diff --git a/build/external/deb/debian/rules b/build/external/deb/debian/rules
+index 6682952fa..01bd02108 100755
+--- a/build/external/deb/debian/rules
++++ b/build/external/deb/debian/rules
+@@ -22,6 +22,9 @@ include /usr/share/dpkg/default.mk
+ override_dh_clean:
+        make $(MAKE_ARGS) clean
+ 
++override_dh_strip:
++       dh_strip --exclude=librte
++
+ override_dh_auto_configure:
+ 
+ override_dh_install:
+diff --git a/build/external/packages/dpdk.mk b/build/external/packages/dpdk.mk
+index da6802e48..efe53c555 100644
+--- a/build/external/packages/dpdk.mk
++++ b/build/external/packages/dpdk.mk
+@@ -13,7 +13,7 @@
+ 
+ DPDK_PKTMBUF_HEADROOM        ?= 128
+ DPDK_USE_LIBBSD              ?= n
+-DPDK_DEBUG                   ?= n
++DPDK_DEBUG                   ?= y
+ DPDK_TAP_PMD                 ?= n
+ DPDK_FAILSAFE_PMD            ?= n
+ DPDK_MACHINE                 ?= default
+@@ -33,12 +33,21 @@ dpdk_tarball_strip_dirs      := 1
+ ifeq ($(shell uname), FreeBSD)
+ dpdk_depends                := $(if $(ARCH_X86_64), ipsec-mb)
+ else
+-dpdk_depends                := rdma-core $(if $(ARCH_X86_64), ipsec-mb)
+-endif
+-ifeq ($(rdma-core_version),)
+-$(error Missing rdma-core_version)
++dpdk_depends                := $(if $(ARCH_X86_64), ipsec-mb)
++#dpdk_depends               := rdma-core $(if $(ARCH_X86_64), ipsec-mb)
+ endif
+-DPDK_MLX_DEFAULT             := $(shell if grep -q "rdma=$(rdma-core_version) dpdk=$(dpdk_version)" mlx_rdma_dpdk_matrix.txt; then echo 'y'; else echo 'n'; fi)
++#------ PK FIXME DISABLE all RDMA
++#ifeq ($(rdma-core_version),)
++#$(error Missing rdma-core_version)
++#endif
++#DPDK_MLX_DEFAULT             := $(shell if grep -q "rdma=$(rdma-core_version) dpdk=$(dpdk_version)" mlx_rdma_dpdk_matrix.txt; then echo 'y'; else echo 'n'; fi)
++#DPDK_MLX4_PMD                ?= $(DPDK_MLX_DEFAULT)
++#DPDK_MLX5_PMD                ?= $(DPDK_MLX_DEFAULT)
++#DPDK_MLX5_COMMON_PMD         ?= $(DPDK_MLX_DEFAULT)
++#-----------------------
++# PK DISABLE NLX
++#-----------------------
++DPDK_MLX_DEFAULT             := n 
+ DPDK_MLX4_PMD                ?= $(DPDK_MLX_DEFAULT)
+ DPDK_MLX5_PMD                ?= $(DPDK_MLX_DEFAULT)
+ DPDK_MLX5_COMMON_PMD         ?= $(DPDK_MLX_DEFAULT)
+@@ -212,9 +221,7 @@ define dpdk_config_cmds
+        $(call dpdk_config_def,USE_LIBBSD)
+ endef
+ 
+-ifeq ("$(DPDK_VERBOSE)","1")
+ DPDK_VERBOSE_BUILD = --verbose
+-endif
+ 
+ define dpdk_build_cmds
+        cd $(dpdk_build_dir) && \
+diff --git a/build/external/packages/quicly.mk b/build/external/packages/quicly.mk
+index 9fee59a68..68a1da2f3 100644
+--- a/build/external/packages/quicly.mk
++++ b/build/external/packages/quicly.mk
+@@ -40,6 +40,7 @@ endef
+ 
+ define  quicly_install_cmds
+        @rm -f $(quicly_install_log)
++       echo $(MAKE) $(MAKE_ARGS) $(quicly_build_dir) $(picotls_build_dir)
+        @$(MAKE) $(MAKE_ARGS) -C $(quicly_build_dir) install >> $(quicly_install_log)
+        @$(MAKE) $(MAKE_ARGS) -C $(picotls_build_dir) install >> $(quicly_install_log)
+ endef
+diff --git a/build/external/patches/dpdk_24.11.1/0001-net-ice-fix-how-ice-driver-handles-flows.patch b/build/external/patches/dpdk_24.11.1/0001-net-ice-fix-how-ice-driver-handles-flows.patch
+deleted file mode 100644
+index 2808b1425..000000000
+--- a/build/external/patches/dpdk_24.11.1/0001-net-ice-fix-how-ice-driver-handles-flows.patch
++++ /dev/null
+@@ -1,64 +0,0 @@
+-From b33b5d621d340d033cd1d181b0ab0c09dc9bd787 Mon Sep 17 00:00:00 2001
+-From: Vladimir Medvedkin <vladimir.medvedkin@intel.com>
+-Date: Thu, 30 Jan 2025 15:50:11 +0000
+-Subject: [PATCH] net/ice: fix how ice driver handles flows
+-
+-Currently ICE PMD uses group attribute to select the appropriate HW engine
+-to offload the flow. This behavior violates the rte_flow API, existing
+-documentation/examples, and reveals hardware specific details.
+-
+-This patch eliminates the use of the group attribute and runs each engine
+-parser in the order they work in the HW pipeline.
+-
+-Fixes: 9c5f0070fa3f ("net/ice: map group to pipeline stage")
+-Cc: qi.z.zhang@intel.com
+-Cc: stable@dpdk.org
+-
+-Signed-off-by: Vladimir Medvedkin <vladimir.medvedkin@intel.com>
+----
+- drivers/net/ice/ice_generic_flow.c | 27 ++++++++++++++-------------
+- 1 file changed, 14 insertions(+), 13 deletions(-)
+-
+-diff --git a/drivers/net/ice/ice_generic_flow.c b/drivers/net/ice/ice_generic_flow.c
+-index 50d760004f..666c8f3cb9 100644
+---- a/drivers/net/ice/ice_generic_flow.c
+-+++ b/drivers/net/ice/ice_generic_flow.c
+-@@ -2295,21 +2295,22 @@ ice_flow_process_filter(struct rte_eth_dev *dev,
+-               return 0;
+-       }
+- 
+--      parser = get_flow_parser(attr->group);
+--      if (parser == NULL) {
+--              rte_flow_error_set(error, EINVAL,
+--                                 RTE_FLOW_ERROR_TYPE_ATTR,
+--                                 NULL, "NULL attribute.");
+--              return -rte_errno;
+-+      for (int i = 0; i < 3; i++) {
+-+              parser = get_flow_parser(i);
+-+              if (parser == NULL) {
+-+                      rte_flow_error_set(error, EINVAL,
+-+                                      RTE_FLOW_ERROR_TYPE_ATTR,
+-+                                      NULL, "NULL attribute.");
+-+                      return -rte_errno;
+-+              }
+-+              if (ice_parse_engine(ad, flow, parser, attr->priority,
+-+                              pattern, actions, error)) {
+-+                      *engine = parser->engine;
+-+                      return 0;
+-+              }
+-       }
+- 
+--      if (ice_parse_engine(ad, flow, parser, attr->priority,
+--                           pattern, actions, error)) {
+--              *engine = parser->engine;
+--              return 0;
+--      } else {
+--              return -rte_errno;
+--      }
+-+      return -rte_errno;
+- }
+- 
+- static int
+--- 
+-2.43.0
+-
+diff --git a/build/packages_common.mk b/build/packages_common.mk
+index 1006a0614..250cff278 100644
+--- a/build/packages_common.mk
++++ b/build/packages_common.mk
+@@ -74,14 +74,25 @@ $1-extract: $(B)/.$1.extract.ok
+ ##############################################################################
+ # Patch
+ ##############################################################################
++GEMU = /tmp/new/dpdk/
+ $(B)/.$1.patch.ok: $(B)/.$1.extract.ok
+        $$(call h1,"patching $1 $($1_version)")
+-ifneq ($$(wildcard $$($1_patch_dir)/*.patch),)
+-       @for f in $$($1_patch_dir)/*.patch ; do \
+-               echo "Applying patch: $$$$(basename $$$$f)" ; \
+-               patch -p1 -d $$($1_src_dir) < $$$$f ; \
+-       done
+-endif
++#ifneq ($$(wildcard $$($1_patch_dir)/*.patch),)
++#      @for f in $$($1_patch_dir)/*.patch ; do \
++#              echo "Applying patch: $$$$(basename $$$$f)" ; \
++#              patch -p1 -d $$($1_src_dir) < $$$$f ; \
++#      done
++#endif
++       @if [[ "$1" == "dpdk"* ]]; then \
++               echo "$1 $($1_version) patch with gem ethernet driver GEMU srcdir=$$(GEMU), dst_dir=$$($1_src_dir)" ; \
++               cp    $$(GEMU)/app/meson.build                 $$($1_src_dir)/app ; \
++               cp    $$(GEMU)/drivers/common/meson.build      $$($1_src_dir)/drivers/common ; \
++               cp    $$(GEMU)/drivers/bus/meson.build         $$($1_src_dir)/drivers/bus ; \
++               cp    $$(GEMU)/drivers/dma/meson.build         $$($1_src_dir)/drivers/dma ; \
++               cp    $$(GEMU)/drivers/mempool/meson.build     $$($1_src_dir)/drivers/mempool ; \
++               cp    $$(GEMU)/drivers/net/meson.build         $$($1_src_dir)/drivers/net ; \
++               cp -r $$(GEMU)/drivers/net/gemu                $$($1_src_dir)/drivers/net ; \
++       fi
+        @touch $$@
+ 
+ .PHONY: $1-patch
+rusty@verycool-0:~/new/vpp$ 
+

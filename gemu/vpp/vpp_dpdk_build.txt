@@ -1,0 +1,39 @@
+
+https://haryachyy.wordpress.com/2023/06/13/learning-vpp-building-dpdk-with-debug-symbols/
+
+
+Overview
+The goal is to build DPDK which is an external package for VPP together with debug symbols to be able to debug inside DPDK source code.
+
+Version
+
+VPP version is 23.02
+
+Configuration
+We need to modify two files:
+
+build/external/deb/debian/rules
+build/external/packages/dpdk.mk
+
+<dpdk.mk>
+The following flag has to be enabled.
+
+DPDK_DEBUG ?= y
+
+<rules>
+The following lines have to be added.
+
+override_dh_strip:
+dh_strip --exclude=librte
+
+<Rebuild>
+ 
+sudo dpkg -r vpp-ext-deps
+make install-ext-dep
+make rebuild
+gdb
+
+When running gdb we need to specify the path to DPDK sources.
+
+set substitute-path '../src-dpdk/' 
+'/home/projects/vpp/build/external/downloads/dpdk-22.07'
